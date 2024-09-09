@@ -1,0 +1,6 @@
+Indirilecek Kütüphaneler : Package Manager Console'dan yazabilirsiniz
+
+install-package Microsoft.EntityFrameworkCore.SqlServer
+install-package Microsoft.EntityFrameworkCore.Tools
+install-package Microsoft.EntityFrameworkCore.Proxies
+install-package Microsoft.AspNetCore.Identity.EntityFrameworkCore
