@@ -1,4 +1,5 @@
 ﻿using CoreIdentity_1.Models.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CoreIdentity_1.Models.Configurations

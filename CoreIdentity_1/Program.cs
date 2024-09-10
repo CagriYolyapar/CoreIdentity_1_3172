@@ -1,4 +1,4 @@
-using CoreIdentity_1.Models.ContextClasses;
+﻿using CoreIdentity_1.Models.ContextClasses;
 using CoreIdentity_1.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +16,7 @@ builder.Services.AddIdentity<AppUser, AppRole>(x =>
     x.Password.RequireNonAlphanumeric = false;
     x.Lockout.MaxFailedAccessAttempts = 5;
     x.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    x.User.RequireUniqueEmail = true; //eger böyle yapmazsanız aynı email'den baska kişiler kayıt olabilir
    
 }).AddEntityFrameworkStores<MyContext>();
 
@@ -41,9 +42,14 @@ builder.Services.AddDbContextPool<MyContext>(x => x.UseSqlServer(builder.Configu
 
 
 
+
+
+
 WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
+
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
