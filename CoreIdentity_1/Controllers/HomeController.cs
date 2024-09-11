@@ -2,12 +2,16 @@
 using CoreIdentity_1.Models.ContextClasses;
 using CoreIdentity_1.Models.Entities;
 using CoreIdentity_1.Models.ViewModels.AppUsers.PureVms.RequestModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
+//using Digeri = Microsoft.AspNetCore.Mvc.SignInResult;
 
 namespace CoreIdentity_1.Controllers
 {
+    [AutoValidateAntiforgeryToken] //Get ile gelen sayfada verilen özel bir token sayesinde Post isteklerinin bu token'siz yapılamamasını saglar...PostMan gibi third part software'lerden gözlemlediginizde direkt Post tarafına ulasamayacagınızı göreceksiniz...
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -73,9 +77,15 @@ namespace CoreIdentity_1.Controllers
                 IdentityResult identityResult = await _userManager.CreateAsync(appUser, model.Password);
                 if (identityResult.Succeeded)
                 {
-                    AppRole appRole = await _roleManager.FindByNameAsync("Admin"); //Admin ismindeki rolü bulabilirse Role nesnesini AppRole'e atacak bulamazsa appRole null olacak
-                    if (appRole == null) await _roleManager.CreateAsync(new() { Name="Admin"}); //Admin isminde bir role yarattık
-                    await _userManager.AddToRoleAsync(appUser, "Admin"); //appUser degişkeninin tuttugu kullanıcı nesnesine Admin isimli rolü ekledik...
+                    #region AdminEklemekIcinTekKullanimlikKod
+                    //AppRole appRole = await _roleManager.FindByNameAsync("Admin"); //Admin ismindeki rolü bulabilirse Role nesnesini AppRole'e atacak bulamazsa appRole null olacak
+                    //if (appRole == null) await _roleManager.CreateAsync(new() { Name = "Admin" }); //Admin isminde bir role yarattık
+                    //await _userManager.AddToRoleAsync(appUser, "Admin"); //appUser degişkeninin tuttugu kullanıcı nesnesine Admin isimli rolü ekledik... 
+                    #endregion
+
+                    AppRole appRole = await _roleManager.FindByNameAsync("Member");
+                    if (appRole == null) await _roleManager.CreateAsync(new() { Name = "Member" });
+                    await _userManager.AddToRoleAsync(appUser, "Member"); //Register artık bu kod sayesinde direkt kayıt olan kişiye Member rolü verecek
 
                     return RedirectToAction("Index");
                 }
@@ -89,6 +99,99 @@ namespace CoreIdentity_1.Controllers
             }
 
             return View(model);
+        }
+
+        //Unutmayın ki Identity User nesnesine ulasabilmek icin Authorize attribute'unuzun olması gereklidir
+
+
+
+        [Authorize(Roles ="Admin")]
+        public IActionResult AdminPanel()
+        {
+          
+            return View();
+        }
+
+        [Authorize(Roles ="Member")]
+        public IActionResult MemberPanel()
+        {
+            return View();
+        }
+
+
+        public IActionResult Panel()
+        {
+            return View();
+        }
+
+        public IActionResult SignIn(string returnUrl)
+        {
+            UserSignInRequestModel usModel = new()
+            {
+                ReturnUrl = returnUrl,
+            };
+            return View(usModel);
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> SignIn(UserSignInRequestModel model)
+        {
+            if (ModelState.IsValid)
+            {
+              AppUser appUser =  await _userManager.FindByNameAsync(model.UserName); //await ile bir Task'in direkt sonucunu beklediginiz icin onu ele alırsınız
+
+              SignInResult signInResult = await _signInManager.PasswordSignInAsync(appUser, model.Password, model.RememberMe, true);
+
+                if (signInResult.Succeeded)
+                {
+                    if (!string.IsNullOrEmpty(model.ReturnUrl))
+                    {
+                        return Redirect(model.ReturnUrl);
+                    }
+
+                    IList<string> roles = await _userManager.GetRolesAsync(appUser);
+                    if (roles.Contains("Admin")) return RedirectToAction("AdminPanel");
+                    else if (roles.Contains("Member")) return RedirectToAction("MemberPanel");
+                    return RedirectToAction("Panel");
+                    
+                }
+                else if (signInResult.IsLockedOut)
+                {
+                    DateTimeOffset? lockOutEndDate = await _userManager.GetLockoutEndDateAsync(appUser);
+                    ModelState.AddModelError("", $"Hesabınız {(lockOutEndDate.Value.UtcDateTime - DateTime.UtcNow).Minutes} dakika süreyle askıya alınmıstır");
+                }
+
+                else
+                {
+                    string message = "";
+
+                    if (appUser != null)
+                    {
+                        int maxFailedAttempts = _userManager.Options.Lockout.MaxFailedAccessAttempts; //bu,middleware'deki maksimum hata sayınız...
+                        message = $"Eger {maxFailedAttempts - await _userManager.GetAccessFailedCountAsync(appUser)} kez daha yanlıs giriş yaparsanız hesabınız gecici olarak askıya alınacaktır";//buradaki  userManager'daki ise su ana kadar kac kez yanlıslık yaptınız..
+                    }
+                    else message = "Kullanıcı bulunamadı";
+
+                    ModelState.AddModelError("", message);
+                }
+               
+            }
+
+            return View(model);
+        }
+
+
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+
+        public async Task<IActionResult> SignOut()
+        {
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Index");
         }
     }
 }
