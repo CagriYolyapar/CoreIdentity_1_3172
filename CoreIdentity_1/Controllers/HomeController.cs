@@ -94,7 +94,7 @@ namespace CoreIdentity_1.Controllers
                 {
                     ModelState.AddModelError("", error.Description);
                 }
-                
+
 
             }
 
@@ -105,14 +105,14 @@ namespace CoreIdentity_1.Controllers
 
 
 
-        [Authorize(Roles ="Admin")]
+        [Authorize(Roles = "Admin")]
         public IActionResult AdminPanel()
         {
-          
+
             return View();
         }
 
-        [Authorize(Roles ="Member")]
+        [Authorize(Roles = "Member")]
         public IActionResult MemberPanel()
         {
             return View();
@@ -139,9 +139,20 @@ namespace CoreIdentity_1.Controllers
         {
             if (ModelState.IsValid)
             {
-              AppUser appUser =  await _userManager.FindByNameAsync(model.UserName); //await ile bir Task'in direkt sonucunu beklediginiz icin onu ele alırsınız
+                AppUser appUser = await _userManager.FindByNameAsync(model.UserName); //await ile bir Task'in direkt sonucunu beklediginiz icin onu ele alırsınız
 
-              SignInResult signInResult = await _signInManager.PasswordSignInAsync(appUser, model.Password, model.RememberMe, true);
+                if (appUser == null)
+                {
+                    TempData["Message"] = "Kullanıcı bulunamadı";
+                    return RedirectToAction("SignIn");
+                }
+
+                SignInResult signInResult = await _signInManager.PasswordSignInAsync(appUser, model.Password, model.RememberMe, true);
+
+
+
+
+                
 
                 if (signInResult.Succeeded)
                 {
@@ -154,7 +165,7 @@ namespace CoreIdentity_1.Controllers
                     if (roles.Contains("Admin")) return RedirectToAction("AdminPanel");
                     else if (roles.Contains("Member")) return RedirectToAction("MemberPanel");
                     return RedirectToAction("Panel");
-                    
+
                 }
                 else if (signInResult.IsLockedOut)
                 {
@@ -166,16 +177,16 @@ namespace CoreIdentity_1.Controllers
                 {
                     string message = "";
 
-                    if (appUser != null)
-                    {
-                        int maxFailedAttempts = _userManager.Options.Lockout.MaxFailedAccessAttempts; //bu,middleware'deki maksimum hata sayınız...
-                        message = $"Eger {maxFailedAttempts - await _userManager.GetAccessFailedCountAsync(appUser)} kez daha yanlıs giriş yaparsanız hesabınız gecici olarak askıya alınacaktır";//buradaki  userManager'daki ise su ana kadar kac kez yanlıslık yaptınız..
-                    }
-                    else message = "Kullanıcı bulunamadı";
+
+
+                    int maxFailedAttempts = _userManager.Options.Lockout.MaxFailedAccessAttempts; //bu,middleware'deki maksimum hata sayınız...
+                    message = $"Eger {maxFailedAttempts - await _userManager.GetAccessFailedCountAsync(appUser)} kez daha yanlıs giriş yaparsanız hesabınız gecici olarak askıya alınacaktır";//buradaki  userManager'daki ise su ana kadar kac kez yanlıslık yaptınız..
+
+
 
                     ModelState.AddModelError("", message);
                 }
-               
+
             }
 
             return View(model);

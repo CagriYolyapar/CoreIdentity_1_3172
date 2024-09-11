@@ -1,5 +1,10 @@
 ﻿@model UserSignInRequestModel
 
+<center>
+    <h3> <span class="text-danger">@TempData["message"]  </span> </h3>
+</center>
+
+
 <form asp-action="SignIn" asp-controller="Home" method="post" class="p-3 w-75 m-auto">
 
     <input type="hidden" asp-for="ReturnUrl" />
